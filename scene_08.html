@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scene 08: Flocking</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@700&display=swap');
+        body { margin: 0; overflow: hidden; background-color: #0a0e27; }
+        canvas { display: block; width: 100vw; height: 100vh; object-fit: contain; }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script id="srt-data" type="text/plain">
+97
+00:07:04,930 --> 00:07:09,700
+He stumbles upon the poly and ethical non-monogamy section of Tinder.
+
+98
+00:07:09,460 --> 00:07:12,790
+He reads a bio, married, dating separately, looking for a third.
+
+99
+00:07:13,290 --> 00:07:14,880
+Darwin is fascinated.
+
+100
+00:07:15,220 --> 00:07:16,360
+He pulls out his notebook.
+
+101
+00:07:16,690 --> 00:07:20,590
+He compares this to the mating habits of bonobos or certain flocking birds.
+
+102
+00:07:20,950 --> 00:07:26,590
+He notes that while monogamy is common in humans, this open strategy increases genetic diversity.
+
+103
+00:07:27,150 --> 00:07:29,230
+However, he is baffled by the logistics.
+
+104
+00:07:29,660 --> 00:07:32,670
+He reads about Google calendars and scheduling conflicts.
+
+105
+00:07:33,100 --> 00:07:39,110
+He observes that the energy required to maintain multiple mates seems to outweigh the reproductive benefits.
+
+106
+00:07:39,470 --> 00:07:45,430
+He watches a user try to schedule a date with three different people, fail, and end up eating pizza alone.
+
+107
+00:07:45,910 --> 00:07:50,600
+Darwin writes down, "social complexity has exceeded the organism's carrying capacity."
+</script>
+
+<script>
+const CONFIG = {
+    width: 1920, height: 1080, fps: 60,
+    colors: { bg: '#0a0e27', primary: '#00f5ff', secondary: '#ff6b9d', accent: '#ffd93d', highlight: '#6bcf7f', text: '#e8eaf6', danger: '#ff4757', glow: 'rgba(0,245,255,0.3)' }
+};
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = CONFIG.width; canvas.height = CONFIG.height;
+
+/** UTILS */
+const ease = {
+    linear: t => t,
+    outCubic: t => (--t)*t*t+1,
+    inOutQuad: t => t<.5 ? 2*t*t : -1+(4-2*t)*t
+};
+function parseTime(str) {
+    const [h, m, s] = str.split(':');
+    const [sec, ms] = s.split(',');
+    return (parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(sec)) * 1000 + parseInt(ms);
+}
+function parseSRT() {
+    const raw = document.getElementById('srt-data').textContent.trim();
+    const blocks = raw.split(/\n\s*\n/);
+    const entries = blocks.map(b => {
+        const lines = b.split('\n');
+        if(lines.length < 3) return null;
+        const [start, end] = lines[1].split(' --> ').map(parseTime);
+        return { start, end, text: lines.slice(2).join(' ') };
+    }).filter(e => e);
+    const offset = entries[0].start;
+    entries.forEach(e => { e.start -= offset; e.end -= offset; });
+    return { entries, duration: entries[entries.length-1].end + 2000 };
+}
+
+/** DRAWING */
+function drawNetwork(ctx, t) {
+    // 3 Nodes bouncing
+    const nodes = [
+        {x: 600, y: 400}, {x: 1300, y: 400}, {x: 960, y: 800}
+    ];
+
+    // Edges
+    ctx.strokeStyle = CONFIG.colors.primary;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(nodes[0].x, nodes[0].y); ctx.lineTo(nodes[1].x, nodes[1].y);
+    ctx.lineTo(nodes[2].x, nodes[2].y); ctx.lineTo(nodes[0].x, nodes[0].y);
+    ctx.stroke();
+
+    // Nodes
+    nodes.forEach((n, i) => {
+        const bounce = Math.sin(t*2 + i)*10;
+        ctx.fillStyle = CONFIG.colors.secondary;
+        ctx.beginPath(); ctx.arc(n.x, n.y + bounce, 30, 0, Math.PI*2); ctx.fill();
+        drawText(ctx, ["HUSBAND", "WIFE", "UNICORN"][i], n.x, n.y + bounce + 60, 20);
+    });
+}
+
+function drawCalendar(ctx, x, y, size, fillPercent) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size);
+
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(-50, -50, 100, 100);
+
+    // Grid
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1;
+    for(let i=1; i<5; i++) {
+        ctx.beginPath(); ctx.moveTo(-50 + i*20, -50); ctx.lineTo(-50 + i*20, 50); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-50, -50 + i*20); ctx.lineTo(50, -50 + i*20); ctx.stroke();
+    }
+
+    // Fill Blocks
+    const blocks = Math.floor(fillPercent * 25);
+    ctx.fillStyle = CONFIG.colors.danger;
+    for(let i=0; i<blocks; i++) {
+        const bx = (i % 5);
+        const by = Math.floor(i / 5);
+        ctx.fillRect(-50 + bx*20 + 2, -50 + by*20 + 2, 16, 16);
+    }
+
+    ctx.restore();
+}
+
+const SCENE_DATA = parseSRT();
+const SHOTS = [
+    // 1. Poly Section (0-5s)
+    {
+        start: 0, end: 5000,
+        render: (ctx, t, globalT) => {
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             drawText(ctx, "CATEGORY: ETHICAL NON-MONOGAMY", CONFIG.width/2, 100, 50);
+
+             // Network Graph
+             drawNetwork(ctx, t);
+        }
+    },
+    // 2. Darwin Notebook (5-11s)
+    {
+        start: 5000, end: 11000,
+        render: (ctx, t, globalT) => {
+             // Split
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             // Left: Bonobos
+             drawText(ctx, "BONOBOS", 400, 200, 40);
+             for(let i=0; i<5; i++) {
+                 ctx.fillStyle = '#8d6e63';
+                 ctx.beginPath(); ctx.arc(300 + i*50, 400 + Math.sin(t*5 + i)*20, 20, 0, Math.PI*2); ctx.fill();
+             }
+
+             // Right: Flocking Birds
+             drawText(ctx, "FLOCKING", 1400, 200, 40);
+             for(let i=0; i<20; i++) {
+                 const x = 1200 + Math.cos(t + i)*200;
+                 const y = 400 + Math.sin(t + i)*100;
+                 ctx.fillStyle = '#fff';
+                 ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x-10, y-5); ctx.lineTo(x-10, y+5); ctx.fill();
+             }
+
+             drawText(ctx, "COMPARATIVE BIOLOGY", CONFIG.width/2, 800, 50);
+        }
+    },
+    // 3. Genetic Diversity (11-17s)
+    {
+        start: 11000, end: 17000,
+        render: (ctx, t, globalT) => {
+             // Graph going up
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             const h = t * 600;
+             ctx.fillStyle = CONFIG.colors.highlight;
+             ctx.fillRect(CONFIG.width/2 - 100, CONFIG.height - 100 - h, 200, h);
+
+             drawText(ctx, "GENETIC DIVERSITY", CONFIG.width/2, 200, 60);
+             drawText(ctx, "+", CONFIG.width/2, CONFIG.height - 100 - h - 50, 80, 'center', CONFIG.colors.highlight);
+        }
+    },
+    // 4. Logistics Baffled (17-23s)
+    {
+        start: 17000, end: 23000,
+        render: (ctx, t, globalT) => {
+             // Question marks
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             drawText(ctx, "LOGISTICS?", CONFIG.width/2, CONFIG.height/2, 100, 'center', CONFIG.colors.text);
+
+             const angle = t * Math.PI * 2;
+             const r = 300;
+             ctx.fillStyle = CONFIG.colors.dimText;
+             ctx.font = '50px "Inter"';
+             ctx.fillText("?", CONFIG.width/2 + Math.cos(angle)*r, CONFIG.height/2 + Math.sin(angle)*r);
+             ctx.fillText("?", CONFIG.width/2 + Math.cos(angle+2)*r, CONFIG.height/2 + Math.sin(angle+2)*r);
+             ctx.fillText("?", CONFIG.width/2 + Math.cos(angle+4)*r, CONFIG.height/2 + Math.sin(angle+4)*r);
+        }
+    },
+    // 5. Google Calendar (23-33s)
+    {
+        start: 23000, end: 33000,
+        render: (ctx, t, globalT) => {
+             // Calendar filling up
+             drawCalendar(ctx, CONFIG.width/2, CONFIG.height/2, 6, t);
+             drawText(ctx, "SCHEDULING CONFLICTS", CONFIG.width/2, 100, 50, 'center', CONFIG.colors.danger);
+
+             if (t > 0.8) {
+                 drawText(ctx, "OVERLOAD", CONFIG.width/2, CONFIG.height/2, 80, 'center', '#fff');
+             }
+        }
+    },
+    // 6. Energy vs Benefit (33-40s)
+    {
+        start: 33000, end: 40000,
+        render: (ctx, t, globalT) => {
+             // Scales
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             // Left: Energy (Heavy)
+             ctx.fillStyle = CONFIG.colors.danger;
+             ctx.beginPath(); ctx.arc(400, 800, 150, 0, Math.PI*2); ctx.fill();
+             drawText(ctx, "ENERGY COST", 400, 600, 40);
+
+             // Right: Benefit (Light)
+             ctx.fillStyle = CONFIG.colors.highlight;
+             ctx.beginPath(); ctx.arc(1400, 400, 50, 0, Math.PI*2); ctx.fill();
+             drawText(ctx, "REPRODUCTIVE BENEFIT", 1400, 300, 40);
+
+             // Beam
+             ctx.strokeStyle = '#fff';
+             ctx.lineWidth = 10;
+             ctx.beginPath(); ctx.moveTo(400, 800); ctx.lineTo(1400, 400); ctx.stroke();
+        }
+    },
+    // 7. Pizza Alone (40-46s)
+    {
+        start: 40000, end: 46000,
+        render: (ctx, t, globalT) => {
+             // Sad person with Pizza
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             ctx.fillStyle = '#555';
+             ctx.beginPath(); ctx.arc(CONFIG.width/2, CONFIG.height/2, 50, 0, Math.PI*2); ctx.fill();
+             // Pizza
+             ctx.fillStyle = '#ff9800';
+             ctx.beginPath(); ctx.moveTo(CONFIG.width/2, CONFIG.height/2 + 50); ctx.lineTo(CONFIG.width/2 - 40, CONFIG.height/2 + 150); ctx.lineTo(CONFIG.width/2 + 40, CONFIG.height/2 + 150); ctx.fill();
+
+             drawText(ctx, "RESULT: PIZZA ALONE", CONFIG.width/2, 200, 60);
+        }
+    },
+    // 8. Carrying Capacity (46-51s)
+    {
+        start: 46000, end: SCENE_DATA.duration,
+        render: (ctx, t, globalT) => {
+             drawText(ctx, "CARRYING CAPACITY EXCEEDED", CONFIG.width/2, CONFIG.height/2, 60, 'center', CONFIG.colors.danger);
+        }
+    }
+];
+
+function drawText(ctx, text, x, y, size, align='center', color=CONFIG.colors.text) {
+    ctx.font = `bold ${size}px "Space Grotesk"`;
+    ctx.textAlign = align;
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+}
+
+let recorder, chunks=[], startTime;
+function startRecording() {
+    recorder = new MediaRecorder(canvas.captureStream(CONFIG.fps), { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = saveVideo;
+    recorder.start();
+}
+function saveVideo() {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+    a.download = 'scene_08.webm';
+    a.click();
+}
+function loop(ts) {
+    if (!startTime) { startTime = ts; startRecording(); }
+    const elapsed = ts - startTime;
+    const shot = SHOTS.find(s => elapsed >= s.start && elapsed < s.end);
+    if (shot) shot.render(ctx, (elapsed - shot.start)/(shot.end - shot.start), elapsed);
+    else if (elapsed > SCENE_DATA.duration) { recorder.stop(); return; }
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

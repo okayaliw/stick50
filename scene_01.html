@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scene 01: The Victorian vs The Algorithm</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@700&display=swap');
+        body { margin: 0; overflow: hidden; background-color: #0a0e27; }
+        canvas { display: block; width: 100vw; height: 100vh; object-fit: contain; }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script id="srt-data" type="text/plain">
+1
+00:00:00,490 --> 00:00:06,330
+Imagine the father of evolution, Charles Darwin, sitting in a dimly lit room in 2025.
+
+2
+00:00:07,130 --> 00:00:09,010
+He has spent his entire life studying the slow methodical process of natural
+
+3
+00:00:09,010 --> 00:00:19,170
+selection, observing the beak shapes of finches and the shell patterns of tortoise to understand how life survives.
+
+4
+00:00:19,650 --> 00:00:21,190
+He is a man of patience.
+
+5
+00:00:21,680 --> 00:00:24,750
+He is a man of rigorous scientific observation.
+
+6
+00:00:25,120 --> 00:00:32,590
+And now we have handed him an iPhone 17, unlocked it and opened a terrifying application called Tinder.
+
+7
+00:00:33,180 --> 00:00:38,470
+He is about to witness the modern struggle for existence and he is absolutely terrified.
+
+8
+00:00:39,830 --> 00:00:46,600
+To understand Darwin's confusion, you have to remember that in the Victorian era, courtship was a marathon.
+
+9
+00:00:46,550 --> 00:00:55,770
+It involved handwritten letters, supervised walks in the garden and checking the size of a woman's dowry to ensure distinct survival advantages for your offspring.
+
+10
+00:00:56,230 --> 00:00:57,800
+It was slow.
+
+11
+00:00:57,690 --> 00:00:58,690
+It was deliberate.
+
+12
+00:00:59,100 --> 00:01:07,130
+Now, Darwin is looking at a screen where potential mates are discarded with a flick of the thumb faster than a chameleon strikes a fly.
+
+13
+00:01:07,670 --> 00:01:10,240
+He asks what the swiping motion represents.
+
+14
+00:01:10,740 --> 00:01:15,820
+We explained that left means extinction and right means potential breeding partner.
+
+15
+00:01:16,240 --> 00:01:17,670
+His eyes go wide.
+
+16
+00:01:17,990 --> 00:01:21,870
+He realizes he is looking at the most ruthless environment on earth.
+
+17
+00:01:22,460 --> 00:01:28,870
+He adjusts his spectacles, clears his throat and begins his analysis of the North American horned single.
+</script>
+
+<script>
+/**
+ * CONFIGURATION
+ */
+const CONFIG = {
+    width: 1920,
+    height: 1080,
+    fps: 60,
+    colors: {
+        bg: '#0a0e27',
+        primary: '#00f5ff',
+        secondary: '#ff6b9d',
+        accent: '#ffd93d',
+        highlight: '#6bcf7f',
+        text: '#e8eaf6',
+        dimText: '#7e8ba3',
+        danger: '#ff4757',
+        glow: 'rgba(0,245,255,0.3)'
+    },
+    fonts: {
+        title: 'bold 72px "Space Grotesk"',
+        keyword: 'bold 48px "Inter"',
+        label: '32px "Inter"',
+        detail: '24px "JetBrains Mono"'
+    }
+};
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = CONFIG.width;
+canvas.height = CONFIG.height;
+
+/**
+ * UTILS
+ */
+const ease = {
+    linear: t => t,
+    inQuad: t => t*t,
+    outQuad: t => t*(2-t),
+    inOutQuad: t => t<.5 ? 2*t*t : -1+(4-2*t)*t,
+    inCubic: t => t*t*t,
+    outCubic: t => (--t)*t*t+1,
+    inOutCubic: t => t<.5 ? 4*t*t*t : (t-1)*(2*t-2)*(2*t-2)+1,
+    outBack: t => { const c1 = 1.70158; const c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); },
+    elastic: t => { const c4 = (2 * Math.PI) / 3; return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1; }
+};
+
+function lerp(start, end, t) { return start * (1 - t) + end * t; }
+function parseTime(str) {
+    const [h, m, s] = str.split(':');
+    const [sec, ms] = s.split(',');
+    return (parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(sec)) * 1000 + parseInt(ms);
+}
+
+/**
+ * PARSER
+ */
+function parseSRT() {
+    const raw = document.getElementById('srt-data').textContent.trim();
+    const blocks = raw.split(/\n\s*\n/);
+    const entries = blocks.map(b => {
+        const lines = b.split('\n');
+        if(lines.length < 3) return null;
+        const [start, end] = lines[1].split(' --> ').map(parseTime);
+        return { start, end, text: lines.slice(2).join(' ') };
+    }).filter(e => e);
+
+    // Normalize to 0
+    const offset = entries[0].start;
+    entries.forEach(e => {
+        e.start -= offset;
+        e.end -= offset;
+    });
+    return { entries, offset, duration: entries[entries.length-1].end + 2000 };
+}
+
+/**
+ * DRAWING PRIMITIVES
+ */
+function drawDarwin(ctx, x, y, scale, alpha) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.globalAlpha = alpha;
+
+    // Silhouette Head
+    ctx.fillStyle = CONFIG.colors.text;
+    ctx.beginPath();
+    ctx.arc(0, -50, 40, 0, Math.PI*2); // Head
+    ctx.fill();
+
+    // Beard
+    ctx.beginPath();
+    ctx.moveTo(-35, -40);
+    ctx.quadraticCurveTo(-50, 20, 0, 60);
+    ctx.quadraticCurveTo(50, 20, 35, -40);
+    ctx.fill();
+
+    // Body
+    ctx.fillStyle = CONFIG.colors.dimText;
+    ctx.beginPath();
+    ctx.moveTo(-60, 20);
+    ctx.quadraticCurveTo(0, 0, 60, 20);
+    ctx.lineTo(60, 150);
+    ctx.lineTo(-60, 150);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function drawBeak(ctx, x, y, size, type, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = CONFIG.colors.primary;
+    ctx.beginPath();
+    if (type === 0) { // Thick
+        ctx.moveTo(0, 0); ctx.lineTo(size, -size/2); ctx.lineTo(size, size/2);
+    } else { // Thin
+        ctx.moveTo(0, 0); ctx.lineTo(size*1.5, -size/4); ctx.lineTo(size*1.5, size/4);
+    }
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawPhone(ctx, x, y, w, h, t) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Glow
+    ctx.shadowBlur = 20 + Math.sin(t*0.01)*10;
+    ctx.shadowColor = CONFIG.colors.primary;
+
+    ctx.fillStyle = '#000';
+    ctx.strokeStyle = CONFIG.colors.primary;
+    ctx.lineWidth = 4;
+    ctx.roundRect(-w/2, -h/2, w, h, 20);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+/**
+ * ANIMATION ENGINE
+ */
+const SCENE_DATA = parseSRT();
+const TOTAL_DURATION = SCENE_DATA.duration;
+
+// Shot definitions
+// 0:00 - 0:06 (6s) Intro Darwin
+// 0:06 - 0:19 (13s) Finches (Must split: 6+7)
+// 0:19 - 0:32 (13s) Hand Phone (Split: 6+7)
+// ...
+// We need to adhere to max shot length 6s.
+// Scene Duration is ~88s. We need ~15-20 shots.
+
+const SHOTS = [
+    // 1. Intro (0-4s)
+    {
+        start: 0, end: 4000,
+        render: (ctx, t, globalT) => {
+            const z = ease.outCubic(t); // Zoom in
+            renderBackground(ctx, globalT);
+            drawDarwin(ctx, CONFIG.width/2, CONFIG.height/2 + 100 - z*50, 2 + z*0.5, Math.min(1, t*2));
+
+            // Candle light flicker
+            const flicker = Math.random() * 0.2 + 0.8;
+            ctx.fillStyle = 'rgba(255, 200, 50, ' + flicker * 0.1 + ')';
+            ctx.beginPath();
+            ctx.arc(CONFIG.width/2 + 150, CONFIG.height/2 + 50, 100, 0, Math.PI*2);
+            ctx.fill();
+
+            drawText(ctx, "LONDON 2025", CONFIG.width/2, CONFIG.height - 100, 30, 1);
+        }
+    },
+    // 2. Finches/Tortoises (4-9s)
+    {
+        start: 4000, end: 9000,
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            ctx.translate(CONFIG.width/2, CONFIG.height/2);
+            ctx.rotate(t * 0.2); // Slow rotate
+
+            for(let i=0; i<8; i++) {
+                const ang = (i/8)*Math.PI*2;
+                const r = 300 + Math.sin(globalT*0.002 + i)*20;
+                const x = Math.cos(ang)*r;
+                const y = Math.sin(ang)*r;
+                drawBeak(ctx, x, y, 40, i%2, 0);
+            }
+            ctx.setTransform(1,0,0,1,0,0);
+
+            drawText(ctx, "VARIATION", CONFIG.width/2, 200, 48, Math.min(1, t*2));
+        }
+    },
+    // 3. Selection (9-14s)
+    {
+        start: 9000, end: 14000,
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            // Particles merging
+            const count = 20;
+            for(let i=0; i<count; i++) {
+                const p = (i/count);
+                const r = 500 * (1-t);
+                const ang = p * Math.PI * 4 + globalT*0.001;
+                ctx.fillStyle = CONFIG.colors.highlight;
+                ctx.beginPath();
+                ctx.arc(CONFIG.width/2 + Math.cos(ang)*r, CONFIG.height/2 + Math.sin(ang)*r, 5, 0, Math.PI*2);
+                ctx.fill();
+            }
+            drawText(ctx, "NATURAL SELECTION", CONFIG.width/2, CONFIG.height/2, 60, Math.min(1, t*2));
+        }
+    },
+    // 4. Patience (14-19s)
+    {
+        start: 14000, end: 19000,
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            // Clock hands spinning fast
+            ctx.translate(CONFIG.width/2, CONFIG.height/2);
+            ctx.strokeStyle = CONFIG.colors.dimText;
+            ctx.lineWidth = 10;
+            ctx.beginPath(); ctx.arc(0,0, 200, 0, Math.PI*2); ctx.stroke();
+
+            ctx.rotate(globalT * 0.005);
+            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0, -150); ctx.stroke();
+            ctx.setTransform(1,0,0,1,0,0);
+
+            drawText(ctx, "YEARS OF OBSERVATION", CONFIG.width/2, 800, 40, 1);
+        }
+    },
+     // 5. The Handover (19-25s)
+    {
+        start: 19000, end: 25000,
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            // Hand entering
+            const x = lerp(CONFIG.width + 200, CONFIG.width/2, ease.outCubic(t));
+            drawDarwin(ctx, 200, CONFIG.height/2, 1.5, 0.5); // Background Darwin
+
+            ctx.fillStyle = CONFIG.colors.primary;
+            drawPhone(ctx, x, CONFIG.height/2, 150, 300, globalT);
+        }
+    },
+    // 6. Tinder Open (25-30s)
+    {
+        start: 25000, end: 30000,
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            // Flame Icon
+            const scale = ease.elastic(t);
+            ctx.translate(CONFIG.width/2, CONFIG.height/2);
+            ctx.scale(scale, scale);
+
+            ctx.fillStyle = CONFIG.colors.danger;
+            ctx.beginPath();
+            ctx.arc(0,0, 100, 0, Math.PI*2);
+            ctx.fill();
+            // Flame shape simple
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(0, 20, 50, 0, Math.PI*2);
+            ctx.fill();
+
+            ctx.setTransform(1,0,0,1,0,0);
+            drawText(ctx, "THE ALGORITHM", CONFIG.width/2, 200, 48, 1);
+        }
+    },
+    // 7. Terrified (30-36s)
+    {
+        start: 30000, end: 36000,
+        render: (ctx, t, globalT) => {
+             renderBackground(ctx, globalT);
+             // Darwin shaking
+             const shake = Math.sin(globalT*0.1) * 5;
+             drawDarwin(ctx, CONFIG.width/2 + shake, CONFIG.height/2, 3, 1);
+
+             // Question marks
+             if (globalT % 1000 < 500) {
+                 drawText(ctx, "?", CONFIG.width/2 + 200, CONFIG.height/2 - 200, 100, 1);
+             }
+             if (globalT % 1200 < 600) {
+                 drawText(ctx, "?", CONFIG.width/2 - 200, CONFIG.height/2 - 250, 80, 1);
+             }
+        }
+    },
+    // 8. Victorian Marathon (36-42s)
+    {
+        start: 36000, end: 42000,
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            drawText(ctx, "VICTORIAN COURTSHIP", CONFIG.width/2, 200, 60, 1);
+
+            // Long Path
+            ctx.strokeStyle = CONFIG.colors.text;
+            ctx.lineWidth = 5;
+            ctx.setLineDash([20, 20]);
+            ctx.beginPath();
+            ctx.moveTo(100, CONFIG.height/2);
+            ctx.lineTo(CONFIG.width - 100 * (1-t), CONFIG.height/2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    },
+    // 9. Letters & Walks (42-48s)
+    {
+        start: 42000, end: 48000,
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            // Icons popping up
+            const s1 = ease.outBack(Math.min(1, t*3));
+            const s2 = ease.outBack(Math.min(1, Math.max(0, t-0.3)*3));
+
+            // Letter
+            ctx.save();
+            ctx.translate(CONFIG.width/3, CONFIG.height/2);
+            ctx.scale(s1, s1);
+            ctx.fillStyle = CONFIG.colors.secondary;
+            ctx.fillRect(-50, -40, 100, 80);
+            ctx.restore();
+
+            // Tree (Garden)
+            ctx.save();
+            ctx.translate(CONFIG.width*0.66, CONFIG.height/2);
+            ctx.scale(s2, s2);
+            ctx.fillStyle = CONFIG.colors.highlight;
+            ctx.beginPath(); ctx.arc(0, -40, 50, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(-10, 0, 20, 80);
+            ctx.restore();
+        }
+    },
+    // 10. Dowry (48-54s)
+    {
+        start: 48000, end: 54000,
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            // Bag of money
+            drawText(ctx, "DOWRY", CONFIG.width/2, 300, 48, 1);
+            const y = CONFIG.height/2 + Math.sin(globalT*0.005)*20;
+
+            ctx.fillStyle = CONFIG.colors.accent;
+            ctx.beginPath();
+            ctx.arc(CONFIG.width/2, y, 80, 0, Math.PI*2);
+            ctx.fill();
+            drawText(ctx, "$", CONFIG.width/2, y + 20, 60, 1);
+        }
+    },
+    // 11. Slow & Deliberate (54-59s)
+    {
+        start: 54000, end: 59000,
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            // Snail
+            const x = lerp(200, 800, t);
+            ctx.fillStyle = CONFIG.colors.dimText;
+            ctx.beginPath();
+            ctx.arc(x, CONFIG.height/2, 40, 0, Math.PI*2);
+            ctx.fill();
+            drawText(ctx, "SLOW", x, CONFIG.height/2 - 60, 30, 1);
+        }
+    },
+    // 12. The Swipe (59-65s)
+    {
+        start: 59000, end: 65000,
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            // Cards flying left and right
+            if (globalT % 600 < 100) {
+                 // Trigger particle?
+            }
+
+            const offset = Math.sin(globalT * 0.02) * 400;
+            drawPhone(ctx, CONFIG.width/2, CONFIG.height/2, 200, 400, globalT);
+
+            // Thumb
+            ctx.fillStyle = CONFIG.colors.text;
+            ctx.beginPath();
+            ctx.arc(CONFIG.width/2 + offset, CONFIG.height/2 + 100, 50, 0, Math.PI*2);
+            ctx.fill();
+        }
+    },
+    // 13. Chameleon (65-70s)
+    {
+        start: 65000, end: 70000,
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            // Tongue strike
+            const progress = (t * 5) % 1;
+
+            // Chameleon Head
+            ctx.fillStyle = CONFIG.colors.highlight;
+            ctx.beginPath();
+            ctx.arc(200, CONFIG.height/2, 100, 0, Math.PI*2);
+            ctx.fill();
+
+            // Tongue
+            if (progress < 0.5) {
+                const len = progress * 2 * 1000;
+                ctx.strokeStyle = CONFIG.colors.secondary;
+                ctx.lineWidth = 20;
+                ctx.beginPath();
+                ctx.moveTo(300, CONFIG.height/2);
+                ctx.lineTo(300 + len, CONFIG.height/2);
+                ctx.stroke();
+            }
+        }
+    },
+    // 14. Extinction vs Breeding (70-76s)
+    {
+        start: 70000, end: 76000,
+        render: (ctx, t, globalT) => {
+             renderBackground(ctx, globalT);
+
+             // Split Screen
+             // Left
+             ctx.fillStyle = 'rgba(255, 71, 87, 0.2)';
+             ctx.fillRect(0, 0, CONFIG.width/2, CONFIG.height);
+             drawText(ctx, "EXTINCTION", CONFIG.width/4, CONFIG.height/2, 48, 1);
+
+             // Right
+             ctx.fillStyle = 'rgba(107, 207, 127, 0.2)';
+             ctx.fillRect(CONFIG.width/2, 0, CONFIG.width/2, CONFIG.height);
+             drawText(ctx, "BREEDING", CONFIG.width*0.75, CONFIG.height/2, 48, 1);
+        }
+    },
+    // 15. Ruthless Environment (76-82s)
+    {
+        start: 76000, end: 82000,
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            // Digital Grid
+            ctx.strokeStyle = CONFIG.colors.primary;
+            ctx.lineWidth = 2;
+            const scroll = (globalT * 0.2) % 100;
+
+            for(let x=0; x<CONFIG.width; x+=100) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CONFIG.height); ctx.stroke();
+            }
+            for(let y=0; y<CONFIG.height; y+=100) {
+                ctx.beginPath(); ctx.moveTo(0, y+scroll); ctx.lineTo(CONFIG.width, y+scroll); ctx.stroke();
+            }
+
+            drawText(ctx, "RUTHLESS", CONFIG.width/2, CONFIG.height/2, 80, 1);
+        }
+    },
+    // 16. Analysis Begins (82-88s)
+    {
+        start: 82000, end: 88870 + 2000, // +Buffer
+        render: (ctx, t, globalT) => {
+            renderBackground(ctx, globalT);
+            drawDarwin(ctx, CONFIG.width/2, CONFIG.height/2, 3, 1);
+
+            // Spectacles glow
+            ctx.fillStyle = CONFIG.colors.primary;
+            ctx.globalAlpha = 0.5 + Math.sin(globalT*0.01)*0.5;
+            ctx.beginPath();
+            ctx.arc(CONFIG.width/2 - 20, CONFIG.height/2 - 60, 15, 0, Math.PI*2);
+            ctx.arc(CONFIG.width/2 + 20, CONFIG.height/2 - 60, 15, 0, Math.PI*2);
+            ctx.fill();
+
+            drawText(ctx, "ANALYSIS: START", CONFIG.width/2, CONFIG.height - 200, 36, 1);
+        }
+    }
+];
+
+function renderBackground(ctx, t) {
+    ctx.fillStyle = CONFIG.colors.bg;
+    ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
+
+    // Ambient Dust
+    ctx.fillStyle = '#fff';
+    for(let i=0; i<50; i++) {
+        const x = (i * 137 + t * 0.05) % CONFIG.width;
+        const y = (i * 249 + t * 0.02) % CONFIG.height;
+        ctx.globalAlpha = Math.sin(t*0.001 + i)*0.5 + 0.5;
+        ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
+
+function drawText(ctx, text, x, y, size, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = CONFIG.colors.text;
+    ctx.font = `bold ${size}px "Inter"`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y);
+    ctx.restore();
+}
+
+
+/**
+ * RECORDING
+ */
+let recorder;
+let chunks = [];
+
+function startRecording() {
+    const stream = canvas.captureStream(CONFIG.fps);
+    recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = saveVideo;
+    recorder.start();
+}
+
+function stopRecording() {
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+}
+
+function saveVideo() {
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'scene_01.webm';
+    a.click();
+}
+
+/**
+ * MAIN LOOP
+ */
+let startTime = null;
+
+function loop(timestamp) {
+    if (!startTime) startTime = timestamp;
+    const elapsed = timestamp - startTime;
+
+    // Find active shot
+    const shot = SHOTS.find(s => elapsed >= s.start && elapsed < s.end);
+
+    if (shot) {
+        const localT = (elapsed - shot.start) / (shot.end - shot.start);
+        shot.render(ctx, localT, elapsed);
+    } else if (elapsed > TOTAL_DURATION) {
+        stopRecording();
+        return;
+    }
+
+    requestAnimationFrame(loop);
+}
+
+// Start
+setTimeout(() => {
+    startRecording();
+    requestAnimationFrame(loop);
+}, 1000);
+
+</script>
+</body>
+</html>

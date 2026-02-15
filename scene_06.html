@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scene 06: Migration</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@700&display=swap');
+        body { margin: 0; overflow: hidden; background-color: #0a0e27; }
+        canvas { display: block; width: 100vw; height: 100vh; object-fit: contain; }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script id="srt-data" type="text/plain">
+73
+00:05:18,740 --> 00:05:20,600
+He moves on to the traveler archetype.
+
+74
+00:05:21,050 --> 00:05:26,900
+The woman standing on a cliff in Bali, the man posing with a sedated tiger in Thailand.
+
+75
+00:05:26,600 --> 00:05:30,240
+He reads the bio, "Wanderlust, not looking for anything serious."
+
+76
+00:05:30,780 --> 00:05:33,180
+He identifies this as a migratory species.
+
+77
+00:05:33,750 --> 00:05:42,320
+In biology, migration is usually driven by seasonal changes or food scarcity, but these humans seem to migrate purely for the sake of content.
+
+78
+00:05:42,700 --> 00:05:44,520
+He is confused by the tiger photo.
+
+79
+00:05:44,910 --> 00:05:47,750
+Why would a primate cuddle with an apex predator?
+
+80
+00:05:48,110 --> 00:05:52,910
+It goes against every survival instinct encoded in our DNA over millions of years.
+
+81
+00:05:53,230 --> 00:05:57,200
+He realizes that natural selection has stopped working on these people.
+
+82
+00:05:57,710 --> 00:06:02,710
+In the Pleistocene era, the man hugging the tiger would be removed from the gene pool immediately.
+
+83
+00:06:03,160 --> 00:06:05,470
+In 2026, he gets a match.
+
+84
+00:06:05,940 --> 00:06:07,890
+Darwin finds this deeply disturbing.
+</script>
+
+<script>
+const CONFIG = {
+    width: 1920, height: 1080, fps: 60,
+    colors: { bg: '#0a0e27', primary: '#00f5ff', secondary: '#ff6b9d', accent: '#ffd93d', highlight: '#6bcf7f', text: '#e8eaf6', danger: '#ff4757', glow: 'rgba(0,245,255,0.3)' }
+};
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = CONFIG.width; canvas.height = CONFIG.height;
+
+/** UTILS */
+const ease = {
+    linear: t => t,
+    outCubic: t => (--t)*t*t+1,
+    inOutQuad: t => t<.5 ? 2*t*t : -1+(4-2*t)*t
+};
+function parseTime(str) {
+    const [h, m, s] = str.split(':');
+    const [sec, ms] = s.split(',');
+    return (parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(sec)) * 1000 + parseInt(ms);
+}
+function parseSRT() {
+    const raw = document.getElementById('srt-data').textContent.trim();
+    const blocks = raw.split(/\n\s*\n/);
+    const entries = blocks.map(b => {
+        const lines = b.split('\n');
+        if(lines.length < 3) return null;
+        const [start, end] = lines[1].split(' --> ').map(parseTime);
+        return { start, end, text: lines.slice(2).join(' ') };
+    }).filter(e => e);
+    const offset = entries[0].start;
+    entries.forEach(e => { e.start -= offset; e.end -= offset; });
+    return { entries, duration: entries[entries.length-1].end + 2000 };
+}
+
+/** DRAWING */
+function drawGlobe(ctx, x, y, size, angle) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI*2);
+    ctx.fillStyle = '#1a237e'; ctx.fill(); // Ocean
+    ctx.strokeStyle = CONFIG.colors.primary; ctx.stroke();
+
+    // Continents
+    ctx.clip();
+    ctx.fillStyle = '#2e7d32';
+    for(let i=0; i<5; i++) {
+        const cx = Math.cos(angle + i)*size*0.8;
+        const cy = Math.sin(angle*0.5 + i)*size*0.5;
+        ctx.beginPath(); ctx.arc(cx, cy, size*0.4, 0, Math.PI*2); ctx.fill();
+    }
+
+    // Pins
+    for(let i=0; i<8; i++) {
+        const px = Math.cos(angle*2 + i)*size*0.9;
+        const py = Math.sin(angle + i)*size*0.6;
+
+        ctx.fillStyle = CONFIG.colors.danger;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px-5, py-15); ctx.arc(px, py-15, 5, 0, Math.PI*2); ctx.lineTo(px+5, py-15); ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+function drawDNA(ctx, x, y, len, progress) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.lineWidth = 4;
+
+    for(let i=0; i<len; i++) {
+        const xx = i*20;
+        const yy1 = Math.sin(i*0.5)*30;
+        const yy2 = Math.sin(i*0.5 + Math.PI)*30;
+
+        // Helix
+        ctx.strokeStyle = CONFIG.colors.primary;
+        ctx.beginPath(); ctx.moveTo(xx, yy1); ctx.lineTo(xx+20, Math.sin((i+1)*0.5)*30); ctx.stroke();
+        ctx.strokeStyle = CONFIG.colors.secondary;
+        ctx.beginPath(); ctx.moveTo(xx, yy2); ctx.lineTo(xx+20, Math.sin((i+1)*0.5 + Math.PI)*30); ctx.stroke();
+
+        // Rungs
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.beginPath(); ctx.moveTo(xx, yy1); ctx.lineTo(xx, yy2); ctx.stroke();
+
+        // Break
+        if (progress > 0 && i > len - progress*len) {
+             // Shatter
+             ctx.fillStyle = CONFIG.colors.danger;
+             ctx.beginPath(); ctx.arc(xx, 0, 5, 0, Math.PI*2); ctx.fill();
+        }
+    }
+    ctx.restore();
+}
+
+const SCENE_DATA = parseSRT();
+const SHOTS = [
+    // 1. Traveler Archetype (0-6s)
+    {
+        start: 0, end: 6000,
+        render: (ctx, t, globalT) => {
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             drawGlobe(ctx, CONFIG.width/2, CONFIG.height/2, 300, globalT*0.001);
+
+             drawText(ctx, "ARCHETYPE: TRAVELER", CONFIG.width/2, 100, 60);
+
+             // Planes
+             const angle = globalT*0.002;
+             const r = 400;
+             const px = CONFIG.width/2 + Math.cos(angle)*r;
+             const py = CONFIG.height/2 + Math.sin(angle)*r;
+
+             ctx.save();
+             ctx.translate(px, py);
+             ctx.rotate(angle + Math.PI/2);
+             ctx.fillStyle = '#fff';
+             ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(15, 10); ctx.lineTo(0, 5); ctx.lineTo(-15, 10); ctx.fill();
+             ctx.restore();
+        }
+    },
+    // 2. Bali & Tiger (6-12s)
+    {
+        start: 6000, end: 12000,
+        render: (ctx, t, globalT) => {
+             // Split Screen
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             // Left: Cliff
+             ctx.fillStyle = '#4caf50';
+             ctx.beginPath(); ctx.moveTo(0, CONFIG.height); ctx.lineTo(400, 400); ctx.lineTo(0, 400); ctx.fill();
+             drawText(ctx, "BALI", 200, 300, 40);
+
+             // Right: Tiger
+             ctx.fillStyle = '#ff9800';
+             ctx.beginPath(); ctx.arc(1400, 600, 100, 0, Math.PI*2); ctx.fill(); // Tiger head
+             // Stripes
+             ctx.fillStyle = '#000';
+             ctx.beginPath(); ctx.moveTo(1400, 550); ctx.lineTo(1350, 600); ctx.lineTo(1450, 600); ctx.fill();
+             drawText(ctx, "SEDATED TIGER", 1400, 450, 40);
+        }
+    },
+    // 3. Wanderlust Bio (12-16s)
+    {
+        start: 12000, end: 16000,
+        render: (ctx, t, globalT) => {
+             ctx.font = 'italic 60px "Inter"';
+             ctx.fillStyle = CONFIG.colors.text;
+             ctx.textAlign = 'center';
+             ctx.fillText('"Wanderlust"', CONFIG.width/2, CONFIG.height/2 - 50);
+
+             ctx.font = '40px "Inter"';
+             ctx.fillStyle = CONFIG.colors.dimText;
+             ctx.fillText("Not looking for anything serious", CONFIG.width/2, CONFIG.height/2 + 50);
+        }
+    },
+    // 4. Migratory Species (16-24s)
+    {
+        start: 16000, end: 24000,
+        render: (ctx, t, globalT) => {
+             // Wildebeest vs Influencer
+             const x = (globalT * 0.2) % CONFIG.width;
+
+             // Wildebeest
+             ctx.fillStyle = '#5d4037';
+             for(let i=0; i<5; i++) {
+                 ctx.fillRect(x + i*50, 300, 40, 20);
+             }
+             drawText(ctx, "SEARCHING FOR FOOD", CONFIG.width/2, 200, 40);
+
+             // Influencer
+             ctx.fillStyle = CONFIG.colors.secondary;
+             for(let i=0; i<5; i++) {
+                 ctx.beginPath(); ctx.arc(x + i*50, 700, 10, 0, Math.PI*2); ctx.fill();
+             }
+             drawText(ctx, "SEARCHING FOR CONTENT", CONFIG.width/2, 600, 40);
+        }
+    },
+    // 5. Primate vs Predator (24-30s)
+    {
+        start: 24000, end: 30000,
+        render: (ctx, t, globalT) => {
+             // Venn Diagram?
+             // Primate | Predator
+
+             const sep = t * 200;
+
+             // Primate
+             ctx.fillStyle = 'rgba(0, 245, 255, 0.5)';
+             ctx.beginPath(); ctx.arc(CONFIG.width/2 - 100 + sep, CONFIG.height/2, 200, 0, Math.PI*2); ctx.fill();
+             drawText(ctx, "PRIMATE", CONFIG.width/2 - 200, CONFIG.height/2, 40);
+
+             // Predator
+             ctx.fillStyle = 'rgba(255, 71, 87, 0.5)';
+             ctx.beginPath(); ctx.arc(CONFIG.width/2 + 100 - sep, CONFIG.height/2, 200, 0, Math.PI*2); ctx.fill();
+             drawText(ctx, "PREDATOR", CONFIG.width/2 + 200, CONFIG.height/2, 40);
+
+             // Center = DEATH
+             if (sep < 100) {
+                 ctx.fillStyle = '#fff';
+                 ctx.font = 'bold 30px "Space Grotesk"';
+                 ctx.fillText("DEATH", CONFIG.width/2, CONFIG.height/2);
+             }
+        }
+    },
+    // 6. Instinct & DNA (30-36s)
+    {
+        start: 30000, end: 36000,
+        render: (ctx, t, globalT) => {
+             drawDNA(ctx, 200, CONFIG.height/2, 80, t); // Breaking
+             drawText(ctx, "SURVIVAL INSTINCT: OFF", CONFIG.width/2, 200, 50, 'center', CONFIG.colors.danger);
+        }
+    },
+    // 7. Pleistocene vs 2026 (36-45s)
+    {
+        start: 36000, end: 45000,
+        render: (ctx, t, globalT) => {
+             // Split time
+             // Left: Caveman gets eaten
+             drawText(ctx, "PLEISTOCENE", 400, 100, 40);
+             const cavemanX = 400;
+             if (t < 0.5) {
+                 ctx.fillStyle = '#fff'; ctx.fillText("💀", cavemanX, 400);
+                 drawText(ctx, "REMOVED FROM GENE POOL", cavemanX, 500, 30, 'center', CONFIG.colors.dimText);
+             }
+
+             // Right: 2026 Match
+             drawText(ctx, "2026", 1400, 100, 40);
+             const modernX = 1400;
+             if (t > 0.5) {
+                 ctx.fillStyle = CONFIG.colors.highlight; ctx.font = '100px "Inter"'; ctx.fillText("It's a Match!", modernX, 400);
+             }
+        }
+    },
+    // 8. Disturbing (45-49s)
+    {
+        start: 45000, end: SCENE_DATA.duration,
+        render: (ctx, t, globalT) => {
+             // Darwin shaking head
+             drawText(ctx, "DEEPLY DISTURBING", CONFIG.width/2, CONFIG.height/2, 80, 'center', CONFIG.colors.danger);
+        }
+    }
+];
+
+function drawText(ctx, text, x, y, size, align='center', color=CONFIG.colors.text) {
+    ctx.font = `bold ${size}px "Space Grotesk"`;
+    ctx.textAlign = align;
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+}
+
+let recorder, chunks=[], startTime;
+function startRecording() {
+    recorder = new MediaRecorder(canvas.captureStream(CONFIG.fps), { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = saveVideo;
+    recorder.start();
+}
+function saveVideo() {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+    a.download = 'scene_06.webm';
+    a.click();
+}
+function loop(ts) {
+    if (!startTime) { startTime = ts; startRecording(); }
+    const elapsed = ts - startTime;
+    const shot = SHOTS.find(s => elapsed >= s.start && elapsed < s.end);
+    if (shot) shot.render(ctx, (elapsed - shot.start)/(shot.end - shot.start), elapsed);
+    else if (elapsed > SCENE_DATA.duration) { recorder.stop(); return; }
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

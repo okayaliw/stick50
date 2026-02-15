@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scene 10: Conclusion</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@700&display=swap');
+        body { margin: 0; overflow: hidden; background-color: #0a0e27; }
+        canvas { display: block; width: 100vw; height: 100vh; object-fit: contain; }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script id="srt-data" type="text/plain">
+121
+00:08:32,940 --> 00:08:35,110
+He sees the phrase sapiosexual.
+
+122
+00:08:35,530 --> 00:08:38,400
+We explain this means being attracted to intelligence.
+
+123
+00:08:38,870 --> 00:08:40,200
+Darwin perks up.
+
+124
+00:08:40,320 --> 00:08:42,880
+Finally, a selection pressure he can get behind.
+
+125
+00:08:43,260 --> 00:08:50,810
+He imagines these people are looking for partners who can quote Lyle's distinct principles of geology or discuss the classification of barnacles.
+
+126
+00:08:51,260 --> 00:08:52,650
+He swipes right, he matches.
+
+127
+00:08:53,160 --> 00:08:59,860
+He sends a message, "Dearest madam, what are your thoughts on the transmutation of species regarding the Galapagos finches?"
+
+128
+00:09:00,310 --> 00:09:01,590
+The reply comes instantly.
+
+129
+00:09:01,930 --> 00:09:04,310
+Lol, you talk weird, you want some fuck?
+
+130
+00:09:04,800 --> 00:09:06,300
+Darwin stares at the screen.
+
+131
+00:09:06,760 --> 00:09:10,200
+The degradation of language is more rapid than he anticipated.
+
+132
+00:09:10,500 --> 00:09:18,480
+He realizes that intelligence in 2025 doesn't mean scientific literacy, it means knowing how to use emojis without looking like a boomer.
+
+133
+00:09:19,160 --> 00:09:21,500
+As the day ends, Darwin sets the phone down.
+
+134
+00:09:21,980 --> 00:09:23,100
+He looks weary.
+
+135
+00:09:23,380 --> 00:09:27,500
+He has witnessed the future of his species and the data is concerning.
+
+136
+00:09:27,520 --> 00:09:31,990
+He has seen males prening like birds of paradise without the ability to build a nest.
+
+137
+00:09:32,290 --> 00:09:36,360
+He has seen females applying digital camouflage to hide their true form.
+
+138
+00:09:36,700 --> 00:09:47,730
+He has seen a total disconnect between fitness in the biological sense, health, strength, adaptability, and fitness in the Tinder sense, gym selfies and Instagram follower counts.
+
+139
+00:09:48,250 --> 00:09:55,750
+He concludes that sexual selection in 2026 is no longer about survival of the fittest, it's survival of the thirstiest.
+
+140
+00:09:56,120 --> 00:10:04,680
+The traits being selected for, vanity, deception, and the ability to take a photo from a high angle, offer no advantage in the struggle against the elements.
+
+141
+00:10:05,270 --> 00:10:10,580
+If a meteor were to strike tomorrow, the influencers and the crypto bros would be the first to perish.
+
+142
+00:10:11,500 --> 00:10:16,770
+The future belongs to the quiet, the practical, perhaps even the ones holding the small, sad fish.
+
+143
+00:10:17,460 --> 00:10:21,890
+Darwin stands up, adjusts his coat, and decides to go back to his earthworms.
+
+144
+00:10:22,190 --> 00:10:31,800
+They are slimy, they are blind, and they live in dirt, but at least they don't ghost you after three weeks of talking because they aren't ready for something serious right now.
+
+145
+00:10:31,390 --> 00:10:40,730
+He walks out the door, leaving the phone buzzing on the table with a new notification, it's a match, but Charles Darwin has already evolved beyond the need for swiping.
+
+146
+00:10:41,400 --> 00:10:42,980
+The human race is fascinating, he thinks.
+
+147
+00:10:43,450 --> 00:10:46,650
+But frankly, the barnacles were much less complicated.
+</script>
+
+<script>
+const CONFIG = {
+    width: 1920, height: 1080, fps: 60,
+    colors: { bg: '#0a0e27', primary: '#00f5ff', secondary: '#ff6b9d', accent: '#ffd93d', highlight: '#6bcf7f', text: '#e8eaf6', danger: '#ff4757', glow: 'rgba(0,245,255,0.3)' }
+};
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = CONFIG.width; canvas.height = CONFIG.height;
+
+/** UTILS */
+const ease = {
+    linear: t => t,
+    outCubic: t => (--t)*t*t+1,
+    inOutQuad: t => t<.5 ? 2*t*t : -1+(4-2*t)*t
+};
+function parseTime(str) {
+    const [h, m, s] = str.split(':');
+    const [sec, ms] = s.split(',');
+    return (parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(sec)) * 1000 + parseInt(ms);
+}
+function parseSRT() {
+    const raw = document.getElementById('srt-data').textContent.trim();
+    const blocks = raw.split(/\n\s*\n/);
+    const entries = blocks.map(b => {
+        const lines = b.split('\n');
+        if(lines.length < 3) return null;
+        const [start, end] = lines[1].split(' --> ').map(parseTime);
+        return { start, end, text: lines.slice(2).join(' ') };
+    }).filter(e => e);
+    const offset = entries[0].start;
+    entries.forEach(e => { e.start -= offset; e.end -= offset; });
+    return { entries, duration: entries[entries.length-1].end + 2000 };
+}
+
+/** DRAWING */
+function drawBrain(ctx, x, y, size) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size);
+    ctx.fillStyle = CONFIG.colors.secondary;
+    // Simple brain shape
+    ctx.beginPath();
+    ctx.ellipse(-20, 0, 30, 40, -0.2, 0, Math.PI*2);
+    ctx.ellipse(20, 0, 30, 40, 0.2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawWorm(ctx, x, y, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = '#f48fb1';
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    for(let i=0; i<10; i++) {
+        const wx = i*20;
+        const wy = Math.sin(t*5 + i)*10;
+        if(i===0) ctx.moveTo(wx, wy); else ctx.lineTo(wx, wy);
+    }
+    ctx.stroke();
+    ctx.restore();
+}
+
+const SCENE_DATA = parseSRT();
+const SHOTS = [
+    // 1. Sapiosexual (0-5s)
+    {
+        start: 0, end: 5000,
+        render: (ctx, t, globalT) => {
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             const size = 2 + Math.sin(t*5)*0.2;
+             drawBrain(ctx, CONFIG.width/2, CONFIG.height/2, size);
+
+             drawText(ctx, "SAPIOSEXUAL", CONFIG.width/2, 200, 60);
+             drawText(ctx, "ATTRACTED TO INTELLIGENCE", CONFIG.width/2, 800, 40, 'center', CONFIG.colors.highlight);
+        }
+    },
+    // 2. Darwin Excited (5-11s)
+    {
+        start: 5000, end: 11000,
+        render: (ctx, t, globalT) => {
+             // Books
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             drawText(ctx, "SELECTION PRESSURE: IQ", CONFIG.width/2, 100, 50);
+
+             ctx.fillStyle = '#fff';
+             ctx.fillRect(CONFIG.width/2 - 150, CONFIG.height/2 - 200, 300, 400); // Book
+             ctx.fillStyle = '#000';
+             ctx.fillText("GEOLOGY", CONFIG.width/2, CONFIG.height/2);
+
+             if (t > 0.5) {
+                 // Swipe Right
+                 ctx.fillStyle = CONFIG.colors.highlight;
+                 ctx.font = '200px "Inter"';
+                 ctx.fillText("✓", 1400, CONFIG.height/2);
+             }
+        }
+    },
+    // 3. The Message (11-18s)
+    {
+        start: 11000, end: 18000,
+        render: (ctx, t, globalT) => {
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             // Chat UI
+             // Darwin
+             ctx.fillStyle = CONFIG.colors.primary;
+             ctx.roundRect(100, 200, 800, 150, 20); ctx.fill();
+             ctx.fillStyle = '#000'; ctx.font = '24px "Inter"'; ctx.fillText("Dearest madam, thoughts on transmutation?", 500, 280);
+
+             // Reply
+             if (t > 0.5) {
+                 ctx.fillStyle = '#333';
+                 ctx.roundRect(1000, 400, 800, 150, 20); ctx.fill();
+                 ctx.fillStyle = '#fff'; ctx.font = 'bold 30px "Comic Sans MS"'; ctx.fillText("Lol u want sum fuk?", 1400, 480);
+             }
+        }
+    },
+    // 4. Degradation (18-27s)
+    {
+        start: 18000, end: 27000,
+        render: (ctx, t, globalT) => {
+             // Emojis raining
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             drawText(ctx, "LANGUAGE DEGRADATION", CONFIG.width/2, 100, 50, 'center', CONFIG.colors.danger);
+
+             const emojis = ["🍆", "🍑", "💦", "🔥", "💀"];
+             for(let i=0; i<20; i++) {
+                 const x = (i * 100 + globalT*0.1) % CONFIG.width;
+                 const y = (globalT * 0.5 + i*50) % CONFIG.height;
+                 ctx.font = '50px "Inter"';
+                 ctx.fillText(emojis[i%5], x, y);
+             }
+        }
+    },
+    // 5. Weary Darwin (27-38s)
+    {
+        start: 27000, end: 38000,
+        render: (ctx, t, globalT) => {
+             // Recap Montage (Still frames)
+             const frame = Math.floor(t * 3);
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             if (frame === 0) drawText(ctx, "NO NEST", CONFIG.width/2, CONFIG.height/2, 80);
+             if (frame === 1) drawText(ctx, "DIGITAL CAMO", CONFIG.width/2, CONFIG.height/2, 80);
+             if (frame === 2) drawText(ctx, "DISCONNECT", CONFIG.width/2, CONFIG.height/2, 80);
+        }
+    },
+    // 6. Survival of Thirstiest (38-48s)
+    {
+        start: 38000, end: 48000,
+        render: (ctx, t, globalT) => {
+             drawText(ctx, "SURVIVAL OF THE THIRSTIEST", CONFIG.width/2, CONFIG.height/2, 60, 'center', CONFIG.colors.accent);
+        }
+    },
+    // 7. Meteor Strike (48-59s)
+    {
+        start: 48000, end: 59000,
+        render: (ctx, t, globalT) => {
+             // Meteor
+             const x = t * CONFIG.width;
+             const y = t * CONFIG.height;
+
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             // Influencers on ground
+             ctx.fillStyle = '#555';
+             for(let i=0; i<10; i++) ctx.fillRect(200 + i*150, CONFIG.height-100, 50, 100);
+
+             // Meteor
+             ctx.fillStyle = CONFIG.colors.danger;
+             ctx.beginPath(); ctx.arc(x, y, 100, 0, Math.PI*2); ctx.fill();
+
+             if (t > 0.8) {
+                 ctx.fillStyle = '#fff';
+                 ctx.fillRect(0,0,CONFIG.width,CONFIG.height); // Impact
+             }
+        }
+    },
+    // 8. Fish Guy Survives (59-69s)
+    {
+        start: 59000, end: 69000,
+        render: (ctx, t, globalT) => {
+             ctx.fillStyle = '#000'; ctx.fillRect(0,0,CONFIG.width,CONFIG.height); // Post-Apoc
+
+             // Bunker
+             ctx.fillStyle = '#333';
+             ctx.fillRect(CONFIG.width/2 - 200, CONFIG.height/2, 400, 300);
+
+             // Fish Guy
+             ctx.fillStyle = CONFIG.colors.highlight;
+             ctx.beginPath(); ctx.arc(CONFIG.width/2, CONFIG.height/2 + 100, 50, 0, Math.PI*2); ctx.fill();
+             // Fish
+             ctx.fillStyle = '#888';
+             ctx.beginPath(); ctx.ellipse(CONFIG.width/2 + 50, CONFIG.height/2 + 100, 30, 10, 0, 0, Math.PI*2); ctx.fill();
+
+             drawText(ctx, "THE PRACTICAL SURVIVE", CONFIG.width/2, 200, 50);
+        }
+    },
+    // 9. Earthworms (69-80s)
+    {
+        start: 69000, end: 80000,
+        render: (ctx, t, globalT) => {
+             ctx.fillStyle = '#3e2723'; ctx.fillRect(0,0,CONFIG.width,CONFIG.height); // Dirt
+
+             drawWorm(ctx, CONFIG.width/2 - 100, CONFIG.height/2, t);
+             drawWorm(ctx, CONFIG.width/2 + 100, CONFIG.height/2 + 100, t + 1);
+
+             drawText(ctx, "SLIMY. BLIND. HONEST.", CONFIG.width/2, 200, 50, 'center', '#fff');
+        }
+    },
+    // 10. Exit (80-End)
+    {
+        start: 80000, end: SCENE_DATA.duration,
+        render: (ctx, t, globalT) => {
+             ctx.fillStyle = '#000'; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             // Silhouette walking away
+             const scale = 1 - t*0.5;
+             ctx.translate(CONFIG.width/2, CONFIG.height/2);
+             ctx.scale(scale, scale);
+             ctx.fillStyle = '#fff';
+             ctx.beginPath(); ctx.arc(0, -100, 40, 0, Math.PI*2); ctx.fill();
+             ctx.fillRect(-30, -60, 60, 150);
+
+             drawText(ctx, "BARNACLES WERE SIMPLER", 0, 200, 40, 'center', '#fff');
+        }
+    }
+];
+
+function drawText(ctx, text, x, y, size, align='center', color=CONFIG.colors.text) {
+    ctx.font = `bold ${size}px "Space Grotesk"`;
+    ctx.textAlign = align;
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+}
+
+let recorder, chunks=[], startTime;
+function startRecording() {
+    recorder = new MediaRecorder(canvas.captureStream(CONFIG.fps), { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = saveVideo;
+    recorder.start();
+}
+function saveVideo() {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+    a.download = 'scene_10.webm';
+    a.click();
+}
+function loop(ts) {
+    if (!startTime) { startTime = ts; startRecording(); }
+    const elapsed = ts - startTime;
+    const shot = SHOTS.find(s => elapsed >= s.start && elapsed < s.end);
+    if (shot) shot.render(ctx, (elapsed - shot.start)/(shot.end - shot.start), elapsed);
+    else if (elapsed > SCENE_DATA.duration) { recorder.stop(); return; }
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scene 05: Sexual Dimorphism</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@700&display=swap');
+        body { margin: 0; overflow: hidden; background-color: #0a0e27; }
+        canvas { display: block; width: 100vw; height: 100vh; object-fit: contain; }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script id="srt-data" type="text/plain">
+64
+00:04:35,840 --> 00:04:38,300
+Darwin discovers the height requirement in bios.
+
+65
+00:04:38,770 --> 00:04:42,750
+He sees profile after profile stating 6-foot or swipe left.
+
+66
+00:04:43,260 --> 00:04:46,140
+He is astounded by this brutal sexual dimorphism.
+
+67
+00:04:46,650 --> 00:04:52,650
+In the animal kingdom, size often dictates dominance, yes, but this level of specificity is unprecedented.
+
+68
+00:04:53,300 --> 00:04:58,630
+He reads a bio from a man named Brad that says, "5'11, but I lie and say six.
+
+69
+00:04:59,100 --> 00:05:00,400
+Darwin chuckles.
+
+70
+00:05:00,410 --> 00:05:02,780
+This is a fascinating behavioral adaptation.
+
+71
+00:05:03,260 --> 00:05:11,590
+It's a deceptive signaling strategy, similar to a crab growing one massive claw to intimidate rivals, even if the claw is weak and hollow.
+
+72
+00:05:12,170 --> 00:05:17,890
+He respects the hustle but questions the long-term viability of a relationship built on a geometric falsehood.
+</script>
+
+<script>
+const CONFIG = {
+    width: 1920, height: 1080, fps: 60,
+    colors: { bg: '#0a0e27', primary: '#00f5ff', secondary: '#ff6b9d', accent: '#ffd93d', highlight: '#6bcf7f', text: '#e8eaf6', danger: '#ff4757', glow: 'rgba(0,245,255,0.3)' }
+};
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = CONFIG.width; canvas.height = CONFIG.height;
+
+/** UTILS */
+const ease = {
+    linear: t => t,
+    outElastic: t => { const c4 = (2 * Math.PI) / 3; return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1; },
+    inOutQuad: t => t<.5 ? 2*t*t : -1+(4-2*t)*t
+};
+function parseTime(str) {
+    const [h, m, s] = str.split(':');
+    const [sec, ms] = s.split(',');
+    return (parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(sec)) * 1000 + parseInt(ms);
+}
+function parseSRT() {
+    const raw = document.getElementById('srt-data').textContent.trim();
+    const blocks = raw.split(/\n\s*\n/);
+    const entries = blocks.map(b => {
+        const lines = b.split('\n');
+        if(lines.length < 3) return null;
+        const [start, end] = lines[1].split(' --> ').map(parseTime);
+        return { start, end, text: lines.slice(2).join(' ') };
+    }).filter(e => e);
+    const offset = entries[0].start;
+    entries.forEach(e => { e.start -= offset; e.end -= offset; });
+    return { entries, duration: entries[entries.length-1].end + 2000 };
+}
+
+/** DRAWING */
+function drawRuler(ctx, x, y, h, highlightY) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = CONFIG.colors.text;
+    ctx.fillRect(0, 0, 10, h); // Main rod
+
+    // Marks
+    for(let i=0; i<=h; i+=20) {
+        ctx.fillRect(-10, i, 20, 2);
+    }
+
+    // Highlight
+    if (highlightY) {
+        ctx.strokeStyle = CONFIG.colors.danger;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(-50, highlightY);
+        ctx.lineTo(50, highlightY);
+        ctx.stroke();
+
+        ctx.fillStyle = CONFIG.colors.danger;
+        ctx.font = 'bold 30px "Space Grotesk"';
+        ctx.fillText("6 FT", 60, highlightY + 10);
+    }
+    ctx.restore();
+}
+
+function drawCrab(ctx, x, y, size, bigClawSize) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size);
+
+    // Body
+    ctx.fillStyle = CONFIG.colors.accent;
+    ctx.beginPath(); ctx.ellipse(0, 0, 40, 30, 0, 0, Math.PI*2); ctx.fill();
+
+    // Legs
+    ctx.strokeStyle = CONFIG.colors.accent;
+    ctx.lineWidth = 4;
+    for(let i=0; i<4; i++) {
+        ctx.beginPath(); ctx.moveTo(30, 10); ctx.lineTo(60 + i*10, 40); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-30, 10); ctx.lineTo(-60 - i*10, 40); ctx.stroke();
+    }
+
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(-10, -30, 5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(10, -30, 5, 0, Math.PI*2); ctx.fill();
+
+    // Small Claw (Left)
+    ctx.fillStyle = CONFIG.colors.secondary;
+    ctx.beginPath(); ctx.arc(-50, 0, 15, 0, Math.PI*2); ctx.fill();
+
+    // Big Claw (Right)
+    ctx.fillStyle = CONFIG.colors.primary; // Hollow/Fake look
+    ctx.beginPath(); ctx.arc(50 + bigClawSize/2, -bigClawSize/2, 15 + bigClawSize, 0, Math.PI*2); ctx.fill();
+
+    // Label "HOLLOW"
+    if (bigClawSize > 20) {
+        ctx.fillStyle = '#000';
+        ctx.font = '10px "Inter"';
+        ctx.textAlign = 'center';
+        ctx.fillText("HOLLOW", 50 + bigClawSize/2, -bigClawSize/2);
+    }
+
+    ctx.restore();
+}
+
+const SCENE_DATA = parseSRT();
+const SHOTS = [
+    // 1. Height Requirement Scanner (0-7s)
+    {
+        start: 0, end: 7000,
+        render: (ctx, t, globalT) => {
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             // Conveyor belt of silhouettes
+             const speed = 200;
+             const offset = (globalT * 0.2) % 300;
+
+             for(let i=0; i<8; i++) {
+                 const x = i * 300 - offset;
+                 // Man
+                 const height = (i % 3 === 0) ? 350 : 300; // Only every 3rd is tall enough
+                 const isTall = height >= 350;
+
+                 ctx.fillStyle = isTall ? CONFIG.colors.highlight : CONFIG.colors.dimText;
+                 ctx.fillRect(x, CONFIG.height/2 - height, 100, height);
+
+                 // Scanner Line
+                 ctx.strokeStyle = CONFIG.colors.danger;
+                 ctx.beginPath(); ctx.moveTo(0, CONFIG.height/2 - 350); ctx.lineTo(CONFIG.width, CONFIG.height/2 - 350); ctx.stroke();
+
+                 // Stamp
+                 if (x > CONFIG.width/2 - 50 && x < CONFIG.width/2 + 50) {
+                     ctx.font = 'bold 40px "Space Grotesk"';
+                     ctx.fillStyle = isTall ? CONFIG.colors.highlight : CONFIG.colors.danger;
+                     ctx.fillText(isTall ? "PASS" : "FAIL", x, CONFIG.height/2 + 50);
+                 }
+             }
+        }
+    },
+    // 2. Sexual Dimorphism (7-11s)
+    {
+        start: 7000, end: 11000,
+        render: (ctx, t, globalT) => {
+             // Elephant Seals?
+             const s1 = 100; // Female
+             const s2 = 400; // Male
+
+             ctx.fillStyle = '#555';
+             ctx.beginPath(); ctx.arc(600, 600, s1, 0, Math.PI*2); ctx.fill();
+             ctx.fillText("FEMALE", 600, 800);
+
+             ctx.fillStyle = '#888';
+             ctx.beginPath(); ctx.arc(1200, 600, s2, 0, Math.PI*2); ctx.fill();
+             ctx.fillText("MALE", 1200, 800);
+
+             drawText(ctx, "DIMORPHISM", CONFIG.width/2, 200, 60);
+        }
+    },
+    // 3. Unprecedented Specificity (11-17s)
+    {
+        start: 11000, end: 17000,
+        render: (ctx, t, globalT) => {
+             // Ruler comparison
+             drawRuler(ctx, CONFIG.width/2, 200, 600, 200); // 6ft mark
+
+             // 5'11 vs 6'0
+             const y6 = 200;
+             const y511 = 220;
+
+             ctx.fillStyle = CONFIG.colors.highlight;
+             ctx.fillRect(800, 200, 50, 600); // 6'0
+
+             ctx.fillStyle = CONFIG.colors.danger;
+             ctx.fillRect(1050, 220, 50, 580); // 5'11
+
+             // Magnifying glass
+             ctx.strokeStyle = CONFIG.colors.primary;
+             ctx.lineWidth = 5;
+             ctx.beginPath(); ctx.arc(CONFIG.width/2, 210, 100, 0, Math.PI*2); ctx.stroke();
+
+             drawText(ctx, "SPECIFICITY", CONFIG.width/2, 100, 40);
+        }
+    },
+    // 4. Brad's Bio (17-23s)
+    {
+        start: 17000, end: 23000,
+        render: (ctx, t, globalT) => {
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             drawText(ctx, "BRAD", CONFIG.width/2, 200, 80);
+             drawText(ctx, "5'11", CONFIG.width/2, 400, 60, 'center', CONFIG.colors.dimText);
+
+             // Cross out
+             if (t > 0.3) {
+                 ctx.strokeStyle = CONFIG.colors.danger;
+                 ctx.beginPath(); ctx.moveTo(800, 400); ctx.lineTo(1100, 400); ctx.stroke();
+             }
+
+             // Write 6'0
+             if (t > 0.5) {
+                 drawText(ctx, "6'0", CONFIG.width/2, 550, 100, 'center', CONFIG.colors.highlight);
+                 drawText(ctx, "(LIE)", CONFIG.width/2 + 200, 550, 40, 'center', CONFIG.colors.danger);
+             }
+        }
+    },
+    // 5. The Fiddler Crab (23-28s)
+    {
+        start: 23000, end: 28000,
+        render: (ctx, t, globalT) => {
+             const grow = t * 100;
+             drawCrab(ctx, CONFIG.width/2, CONFIG.height/2, 2, grow);
+
+             drawText(ctx, "DECEPTIVE SIGNALING", CONFIG.width/2, 100, 50);
+        }
+    },
+    // 6. Geometric Falsehood (28-36s)
+    {
+        start: 28000, end: 36000,
+        render: (ctx, t, globalT) => {
+             // House of cards falling?
+             // Or Triangle crumbling
+
+             ctx.strokeStyle = CONFIG.colors.text;
+             ctx.lineWidth = 5;
+
+             // Triangle
+             const p1 = {x: CONFIG.width/2, y: 200};
+             const p2 = {x: CONFIG.width/2 - 200, y: 600};
+             const p3 = {x: CONFIG.width/2 + 200, y: 600};
+
+             // Wobble
+             const shake = Math.sin(t*20)*10;
+
+             ctx.beginPath();
+             ctx.moveTo(p1.x + shake, p1.y);
+             ctx.lineTo(p2.x, p2.y);
+             ctx.lineTo(p3.x, p3.y);
+             ctx.closePath();
+             ctx.stroke();
+
+             drawText(ctx, "GEOMETRIC FALSEHOOD", CONFIG.width/2, 800, 50);
+
+             if (t > 0.7) {
+                 // Break
+                 ctx.clearRect(0,0,CONFIG.width,CONFIG.height);
+                 drawText(ctx, "COLLAPSE", CONFIG.width/2, CONFIG.height/2, 100, 'center', CONFIG.colors.danger);
+             }
+        }
+    },
+    // 7. Respect the Hustle (36-42s)
+    {
+        start: 36000, end: SCENE_DATA.duration,
+        render: (ctx, t, globalT) => {
+             drawText(ctx, "RESPECT THE HUSTLE", CONFIG.width/2, CONFIG.height/2, 60);
+
+             // Thumbs up?
+             const y = Math.sin(t*5)*20;
+             ctx.font = '100px "Inter"';
+             ctx.fillText("👍", CONFIG.width/2, CONFIG.height/2 + 150 + y);
+        }
+    }
+];
+
+function drawText(ctx, text, x, y, size, align='center', color=CONFIG.colors.text) {
+    ctx.font = `bold ${size}px "Space Grotesk"`;
+    ctx.textAlign = align;
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+}
+
+let recorder, chunks=[], startTime;
+function startRecording() {
+    recorder = new MediaRecorder(canvas.captureStream(CONFIG.fps), { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = saveVideo;
+    recorder.start();
+}
+function saveVideo() {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+    a.download = 'scene_05.webm';
+    a.click();
+}
+function loop(ts) {
+    if (!startTime) { startTime = ts; startRecording(); }
+    const elapsed = ts - startTime;
+    const shot = SHOTS.find(s => elapsed >= s.start && elapsed < s.end);
+    if (shot) shot.render(ctx, (elapsed - shot.start)/(shot.end - shot.start), elapsed);
+    else if (elapsed > SCENE_DATA.duration) { recorder.stop(); return; }
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

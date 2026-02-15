@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scene 03: Mimicry</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@700&display=swap');
+        body { margin: 0; overflow: hidden; background-color: #0a0e27; }
+        canvas { display: block; width: 100vw; height: 100vh; object-fit: contain; }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script id="srt-data" type="text/plain">
+30
+00:02:32,320 --> 00:02:35,100
+The next profile is a woman named Tiffany.
+
+31
+00:02:35,420 --> 00:02:42,500
+Her photos are confusing, in every single one, she has the ears of a dog and a nose that disappears into a blur of light.
+
+32
+00:02:43,210 --> 00:02:44,240
+Darwin panics.
+
+33
+00:02:44,570 --> 00:02:49,430
+Has the human species hybridized with canines, is this a new evolutionary branch?
+
+34
+00:02:50,170 --> 00:02:51,690
+We explain it is a filter.
+
+35
+00:02:52,100 --> 00:02:53,420
+Darwin is appalled.
+
+36
+00:02:53,960 --> 00:02:57,590
+In nature, this is called mimicry, it is a biological lie.
+
+37
+00:02:58,090 --> 00:03:03,750
+It is the equivalent of a harmless fly painting itself yellow and black to look like a dangerous wasp.
+
+38
+00:03:04,320 --> 00:03:07,840
+He argues that this disrupts the integrity of sexual selection.
+
+39
+00:03:07,840 --> 00:03:12,710
+If you cannot see the mate's true phenotype, how can you assess their genetic fitness?
+
+40
+00:03:13,170 --> 00:03:14,230
+He reads her bio.
+
+41
+00:03:14,230 --> 00:03:19,200
+It says, "If you can't handle me at my worst, you don't deserve me at my best."
+
+42
+00:03:19,340 --> 00:03:20,530
+Darwin's size.
+
+43
+00:03:20,950 --> 00:03:28,200
+He notes that in nature, if an animal is at its worst, say a slow gazelle or a sick lion, it simply gets eaten.
+
+44
+00:03:28,490 --> 00:03:29,970
+There is no deserving.
+
+45
+00:03:30,170 --> 00:03:31,480
+There is only survival.
+
+46
+00:03:31,880 --> 00:03:32,840
+He swipes left.
+</script>
+
+<script>
+const CONFIG = {
+    width: 1920, height: 1080, fps: 60,
+    colors: { bg: '#0a0e27', primary: '#00f5ff', secondary: '#ff6b9d', accent: '#ffd93d', highlight: '#6bcf7f', text: '#e8eaf6', danger: '#ff4757', glow: 'rgba(0,245,255,0.3)' }
+};
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = CONFIG.width; canvas.height = CONFIG.height;
+
+/** UTILS */
+const ease = { linear: t => t, outQuad: t => t*(2-t), inOutCubic: t => t<.5 ? 4*t*t*t : (t-1)*(2*t-2)*(2*t-2)+1 };
+function parseTime(str) {
+    const [h, m, s] = str.split(':');
+    const [sec, ms] = s.split(',');
+    return (parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(sec)) * 1000 + parseInt(ms);
+}
+function parseSRT() {
+    const raw = document.getElementById('srt-data').textContent.trim();
+    const blocks = raw.split(/\n\s*\n/);
+    const entries = blocks.map(b => {
+        const lines = b.split('\n');
+        if(lines.length < 3) return null;
+        const [start, end] = lines[1].split(' --> ').map(parseTime);
+        return { start, end, text: lines.slice(2).join(' ') };
+    }).filter(e => e);
+    const offset = entries[0].start;
+    entries.forEach(e => { e.start -= offset; e.end -= offset; });
+    return { entries, duration: entries[entries.length-1].end + 2000 };
+}
+
+/** DRAWING */
+function drawFace(ctx, x, y, size, hasFilter) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size);
+
+    // Head
+    ctx.fillStyle = '#ffccaa';
+    if(hasFilter) {
+        // Blur
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#fff';
+    }
+    ctx.beginPath(); ctx.arc(0, 0, 50, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Eyes
+    ctx.fillStyle = '#333';
+    ctx.beginPath(); ctx.arc(-20, -10, 5, 0, Math.PI*2); ctx.arc(20, -10, 5, 0, Math.PI*2); ctx.fill();
+
+    if (hasFilter) {
+        // Dog Ears
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.ellipse(-40, -40, 20, 40, -0.5, 0, Math.PI*2);
+        ctx.ellipse(40, -40, 20, 40, 0.5, 0, Math.PI*2);
+        ctx.fill();
+
+        // Dog Nose
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.ellipse(0, 10, 10, 8, 0, 0, Math.PI*2); ctx.fill();
+
+        // Sparkles
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(30, 30, 5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-30, 20, 3, 0, Math.PI*2); ctx.fill();
+    } else {
+        // Normal Nose
+        ctx.strokeStyle = '#aa8866';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-5, 10); ctx.lineTo(5, 10); ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawFly(ctx, x, y, isFakeWasp) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Wings
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.beginPath(); ctx.ellipse(-20, -20, 30, 10, -0.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(20, -20, 30, 10, 0.5, 0, Math.PI*2); ctx.fill();
+
+    // Body
+    if (isFakeWasp) {
+        ctx.fillStyle = CONFIG.colors.accent; // Yellow
+        ctx.beginPath(); ctx.ellipse(0, 0, 20, 40, 0, 0, Math.PI*2); ctx.fill();
+        // Stripes
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-15, -10, 30, 5);
+        ctx.fillRect(-18, 5, 36, 5);
+        ctx.fillRect(-12, 20, 24, 5);
+    } else {
+        ctx.fillStyle = '#333'; // Fly
+        ctx.beginPath(); ctx.ellipse(0, 0, 20, 30, 0, 0, Math.PI*2); ctx.fill();
+    }
+
+    // Head
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(0, -30, 15, 0, Math.PI*2); ctx.fill();
+
+    ctx.restore();
+}
+
+const SCENE_DATA = parseSRT();
+const SHOTS = [
+    // 1. Tiffany Profile (0-5s)
+    {
+        start: 0, end: 5000,
+        render: (ctx, t, globalT) => {
+            // Background grid
+            ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+            drawFace(ctx, CONFIG.width/2, CONFIG.height/2, 4 + Math.sin(t*5)*0.1, true);
+
+            ctx.font = 'bold 60px "Space Grotesk"';
+            ctx.fillStyle = CONFIG.colors.text;
+            ctx.textAlign = 'center';
+            ctx.fillText("TIFFANY", CONFIG.width/2, 100);
+
+            // Confusing Particles
+            for(let i=0; i<10; i++) {
+                ctx.fillStyle = Math.random() > 0.5 ? CONFIG.colors.secondary : CONFIG.colors.primary;
+                const x = CONFIG.width/2 + Math.cos(globalT*0.005 + i)*300;
+                const y = CONFIG.height/2 + Math.sin(globalT*0.005 + i)*300;
+                ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI*2); ctx.fill();
+            }
+        }
+    },
+    // 2. Darwin Panic (5-12s)
+    {
+        start: 5000, end: 12000,
+        render: (ctx, t, globalT) => {
+            // DNA Hybridization?
+            ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+            const split = t;
+            // Human DNA
+            ctx.strokeStyle = CONFIG.colors.primary;
+            ctx.lineWidth = 10;
+            ctx.beginPath(); ctx.moveTo(400, 200);
+            for(let i=0; i<10; i++) { ctx.lineTo(400 + Math.sin(i + globalT*0.01)*50, 200 + i*60); }
+            ctx.stroke();
+
+            // Dog DNA?
+            ctx.strokeStyle = CONFIG.colors.accent;
+            ctx.beginPath(); ctx.moveTo(1500, 200);
+            for(let i=0; i<10; i++) { ctx.lineTo(1500 + Math.cos(i + globalT*0.01)*50, 200 + i*60); }
+            ctx.stroke();
+
+            // Question Marks
+            ctx.font = '100px "Inter"';
+            ctx.fillStyle = CONFIG.colors.danger;
+            ctx.fillText("?", CONFIG.width/2, CONFIG.height/2);
+
+            if (t > 0.5) {
+                 ctx.font = 'bold 40px "Space Grotesk"';
+                 ctx.fillText("NEW EVOLUTIONARY BRANCH?", CONFIG.width/2, CONFIG.height - 100);
+            }
+        }
+    },
+    // 3. The Filter Explanation (12-19s)
+    {
+        start: 12000, end: 19000,
+        render: (ctx, t, globalT) => {
+            ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+            // Unmasking
+            const maskY = t * 500;
+            drawFace(ctx, CONFIG.width/2, CONFIG.height/2, 4, false); // Real Face
+
+            // Floating Filter Layer
+            ctx.save();
+            ctx.globalAlpha = 1 - t;
+            ctx.translate(0, -maskY);
+            drawFace(ctx, CONFIG.width/2, CONFIG.height/2, 4, true); // Filter Face
+            ctx.restore();
+
+            ctx.font = 'bold 60px "Space Grotesk"';
+            ctx.fillStyle = CONFIG.colors.secondary;
+            ctx.textAlign = 'center';
+            ctx.fillText("DIGITAL MASK", CONFIG.width/2, 100);
+        }
+    },
+    // 4. Mimicry (Fly/Wasp) (19-26s)
+    {
+        start: 19000, end: 26000,
+        render: (ctx, t, globalT) => {
+            ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+            const x = CONFIG.width/2 + Math.sin(globalT*0.01)*100;
+            const y = CONFIG.height/2 + Math.cos(globalT*0.02)*50;
+
+            drawFly(ctx, x, y, true); // Fake Wasp
+
+            ctx.font = 'bold 50px "Space Grotesk"';
+            ctx.fillStyle = CONFIG.colors.accent;
+            ctx.textAlign = 'center';
+            ctx.fillText("BATESIAN MIMICRY", CONFIG.width/2, 100);
+
+            // Paint Brush
+            if (t < 0.5) {
+                ctx.fillStyle = CONFIG.colors.accent;
+                ctx.fillRect(x + 50, y, 20, 60);
+            }
+        }
+    },
+    // 5. Integrity disrupted (26-32s)
+    {
+        start: 26000, end: 32000,
+        render: (ctx, t, globalT) => {
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             // Graph crashing
+             ctx.strokeStyle = CONFIG.colors.text;
+             ctx.lineWidth = 4;
+             ctx.beginPath();
+             ctx.moveTo(200, 800);
+             ctx.lineTo(1700, 800);
+             ctx.stroke();
+
+             // Data points
+             ctx.strokeStyle = CONFIG.colors.primary;
+             ctx.beginPath();
+             ctx.moveTo(200, 600);
+             ctx.bezierCurveTo(600, 500, 1000, 200, 1200, 800); // Crash
+             ctx.stroke();
+
+             ctx.font = 'bold 40px "Space Grotesk"';
+             ctx.fillStyle = CONFIG.colors.danger;
+             ctx.fillText("DATA CORRUPTED", 1200, 750);
+        }
+    },
+    // 6. Bio Quote (32-41s)
+    {
+        start: 32000, end: 41000,
+        render: (ctx, t, globalT) => {
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             const text = "IF YOU CAN'T HANDLE ME AT MY WORST...";
+             const words = text.split(' ');
+
+             ctx.font = 'bold 40px "Inter"';
+             ctx.fillStyle = CONFIG.colors.text;
+             ctx.textAlign = 'center';
+
+             words.forEach((w, i) => {
+                 const alpha = Math.min(1, Math.max(0, t*10 - i));
+                 ctx.globalAlpha = alpha;
+                 ctx.fillText(w, CONFIG.width/2, 200 + i*60);
+             });
+
+             if (t > 0.6) {
+                 // Cross it out
+                 ctx.strokeStyle = CONFIG.colors.danger;
+                 ctx.lineWidth = 10;
+                 ctx.beginPath();
+                 ctx.moveTo(CONFIG.width/2 - 300, 200);
+                 ctx.lineTo(CONFIG.width/2 + 300, 600);
+                 ctx.stroke();
+             }
+        }
+    },
+    // 7. Gazelle Survival (41-48s)
+    {
+        start: 41000, end: 48000,
+        render: (ctx, t, globalT) => {
+            ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+            // Gazelle
+            const x = 1200 - t * 400;
+            ctx.fillStyle = CONFIG.colors.highlight;
+            ctx.beginPath(); ctx.arc(x, 600, 30, 0, Math.PI*2); ctx.fill(); // Gazelle
+
+            // Lion
+            const lx = 200 + t * 600;
+            ctx.fillStyle = CONFIG.colors.danger;
+            ctx.beginPath(); ctx.arc(lx, 600, 50, 0, Math.PI*2); ctx.fill(); // Lion
+
+            if (lx > x - 50) {
+                // Eaten
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 100px "Space Grotesk"';
+                ctx.fillText("CRUNCH", (x+lx)/2, 500);
+            }
+
+            ctx.font = 'bold 60px "Space Grotesk"';
+            ctx.fillStyle = CONFIG.colors.text;
+            ctx.textAlign = 'center';
+            ctx.fillText("ONLY SURVIVAL", CONFIG.width/2, 200);
+        }
+    },
+    // 8. Swipe Left (48-60s)
+    {
+        start: 48000, end: 60000 + 2000,
+        render: (ctx, t, globalT) => {
+            ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+            // Rejection Icon
+            const scale = ease.outQuad(t);
+            ctx.translate(CONFIG.width/2, CONFIG.height/2);
+            ctx.scale(scale, scale);
+            ctx.font = 'bold 200px "Inter"';
+            ctx.fillStyle = CONFIG.colors.danger;
+            ctx.textAlign = 'center';
+            ctx.fillText("NOPE", 0, 0);
+        }
+    }
+];
+
+let recorder, chunks=[], startTime;
+function startRecording() {
+    recorder = new MediaRecorder(canvas.captureStream(CONFIG.fps), { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = saveVideo;
+    recorder.start();
+}
+function saveVideo() {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+    a.download = 'scene_03.webm';
+    a.click();
+}
+function loop(ts) {
+    if (!startTime) { startTime = ts; startRecording(); }
+    const elapsed = ts - startTime;
+    const shot = SHOTS.find(s => elapsed >= s.start && elapsed < s.end);
+    if (shot) shot.render(ctx, (elapsed - shot.start)/(shot.end - shot.start), elapsed);
+    else if (elapsed > SCENE_DATA.duration) { recorder.stop(); return; }
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scene 09: The Bot</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@700&display=swap');
+        body { margin: 0; overflow: hidden; background-color: #0a0e27; }
+        canvas { display: block; width: 100vw; height: 100vh; object-fit: contain; }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script id="srt-data" type="text/plain">
+108
+00:07:51,520 --> 00:07:54,770
+Suddenly, the app tells Darwin that he has a super like.
+
+109
+00:07:55,100 --> 00:07:56,690
+He panics, is this a predator?
+
+110
+00:07:57,110 --> 00:07:59,380
+No, it is a signal of high interest.
+
+111
+00:07:59,970 --> 00:08:01,330
+He looks at the profile.
+
+112
+00:08:01,590 --> 00:08:02,240
+It is a bot.
+
+113
+00:08:02,490 --> 00:08:06,490
+It is a computer program pretending to be a 20-year-old model named Glof.
+
+114
+00:08:07,400 --> 00:08:08,210
+Darwin engages with it.
+
+115
+00:08:08,420 --> 00:08:11,100
+The bot sends a link to a suspicious webcam site.
+
+116
+00:08:11,540 --> 00:08:15,640
+Darwin, innocent and naive, clicks it, thinking it is a scientific journal.
+
+117
+00:08:16,100 --> 00:08:18,500
+His phone is immediately infected with malware.
+
+118
+00:08:18,970 --> 00:08:22,080
+The screen flashes, Darwin throws the phone across the room.
+
+119
+00:08:22,540 --> 00:08:27,890
+He assumes the device has contracted a virus, which is technically true, though he's thinking of smallpox.
+
+120
+00:08:28,600 --> 00:08:31,490
+He retrieves the phone and decides to look at the bio section one last time.
+</script>
+
+<script>
+const CONFIG = {
+    width: 1920, height: 1080, fps: 60,
+    colors: { bg: '#0a0e27', primary: '#00f5ff', secondary: '#ff6b9d', accent: '#ffd93d', highlight: '#6bcf7f', text: '#e8eaf6', danger: '#ff4757', glow: 'rgba(0,245,255,0.3)' }
+};
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = CONFIG.width; canvas.height = CONFIG.height;
+
+/** UTILS */
+const ease = {
+    linear: t => t,
+    outElastic: t => { const c4 = (2 * Math.PI) / 3; return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1; },
+    inOutQuad: t => t<.5 ? 2*t*t : -1+(4-2*t)*t
+};
+function parseTime(str) {
+    const [h, m, s] = str.split(':');
+    const [sec, ms] = s.split(',');
+    return (parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(sec)) * 1000 + parseInt(ms);
+}
+function parseSRT() {
+    const raw = document.getElementById('srt-data').textContent.trim();
+    const blocks = raw.split(/\n\s*\n/);
+    const entries = blocks.map(b => {
+        const lines = b.split('\n');
+        if(lines.length < 3) return null;
+        const [start, end] = lines[1].split(' --> ').map(parseTime);
+        return { start, end, text: lines.slice(2).join(' ') };
+    }).filter(e => e);
+    const offset = entries[0].start;
+    entries.forEach(e => { e.start -= offset; e.end -= offset; });
+    return { entries, duration: entries[entries.length-1].end + 2000 };
+}
+
+/** DRAWING */
+function drawFace(ctx, x, y, size, peel) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size);
+
+    // Code Base
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(0, 0, 50, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = CONFIG.colors.primary;
+    ctx.font = '10px "JetBrains Mono"';
+    ctx.fillText("010101", -20, 0);
+    ctx.fillText("101010", -20, 10);
+
+    // Face Skin
+    if (peel < 1) {
+        ctx.save();
+        ctx.beginPath(); ctx.arc(0, 0, 50, 0, Math.PI*2);
+        // Peel effect (Clip)
+        ctx.clip();
+
+        ctx.fillStyle = '#ffccaa';
+        ctx.beginPath(); ctx.arc(0, 0, 50, 0, Math.PI*2); ctx.fill(); // Skin
+
+        // Eyes
+        ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(-20, -10, 5, 0, Math.PI*2); ctx.arc(20, -10, 5, 0, Math.PI*2); ctx.fill();
+        // Lips
+        ctx.fillStyle = CONFIG.colors.danger; ctx.beginPath(); ctx.arc(0, 20, 10, 0, Math.PI); ctx.fill();
+
+        // Peel Reveal
+        const peelX = (peel - 0.5) * 200;
+        ctx.clearRect(peelX, -50, 100, 100);
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+function drawPhone(ctx, x, y, shake, infection) {
+    ctx.save();
+    ctx.translate(x + (Math.random()-0.5)*shake, y + (Math.random()-0.5)*shake);
+
+    // Body
+    ctx.fillStyle = '#000';
+    ctx.strokeStyle = CONFIG.colors.primary;
+    ctx.lineWidth = 4;
+    ctx.roundRect(-100, -200, 200, 400, 20);
+    ctx.fill(); ctx.stroke();
+
+    // Screen
+    if (infection > 0) {
+        ctx.fillStyle = infection % 2 === 0 ? CONFIG.colors.danger : '#000';
+        ctx.fillRect(-90, -190, 180, 380);
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 40px "Space Grotesk"';
+        ctx.fillText("VIRUS", -60, 0);
+        ctx.font = '80px "Space Grotesk"';
+        ctx.fillText("⚠️", -40, -50);
+    }
+
+    ctx.restore();
+}
+
+const SCENE_DATA = parseSRT();
+const SHOTS = [
+    // 1. Super Like (0-4s)
+    {
+        start: 0, end: 4000,
+        render: (ctx, t, globalT) => {
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             // Gold Pulse
+             const r = t * 1000;
+             ctx.strokeStyle = CONFIG.colors.accent;
+             ctx.lineWidth = 20 * (1-t);
+             ctx.beginPath(); ctx.arc(CONFIG.width/2, CONFIG.height/2, r, 0, Math.PI*2); ctx.stroke();
+
+             // Star
+             const scale = ease.outElastic(t);
+             ctx.translate(CONFIG.width/2, CONFIG.height/2);
+             ctx.scale(scale, scale);
+             ctx.fillStyle = CONFIG.colors.accent;
+             ctx.font = '200px "Inter"';
+             ctx.textAlign = 'center';
+             ctx.textBaseline = 'middle';
+             ctx.fillText("★", 0, 0);
+
+             drawText(ctx, "SUPER LIKE", 0, 200, 60);
+        }
+    },
+    // 2. Predator? (4-7s)
+    {
+        start: 4000, end: 7000,
+        render: (ctx, t, globalT) => {
+             // Eyes looking around
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             drawText(ctx, "PREDATOR?", CONFIG.width/2, CONFIG.height/2, 80, 'center', CONFIG.colors.danger);
+
+             // Radar
+             const angle = globalT*0.01;
+             ctx.strokeStyle = CONFIG.colors.dimText;
+             ctx.beginPath(); ctx.moveTo(CONFIG.width/2, CONFIG.height/2); ctx.lineTo(CONFIG.width/2 + Math.cos(angle)*500, CONFIG.height/2 + Math.sin(angle)*500); ctx.stroke();
+        }
+    },
+    // 3. High Interest (7-10s)
+    {
+        start: 7000, end: 10000,
+        render: (ctx, t, globalT) => {
+             // Thumbs Up
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+             drawText(ctx, "HIGH INTEREST", CONFIG.width/2, CONFIG.height/2, 80, 'center', CONFIG.colors.highlight);
+        }
+    },
+    // 4. Glof the Bot (10-16s)
+    {
+        start: 10000, end: 16000,
+        render: (ctx, t, globalT) => {
+             // Face peeling
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             drawText(ctx, "GL0F (20)", CONFIG.width/2, 200, 60);
+
+             const peel = t > 0.3 ? (t-0.3)*2 : 0;
+             drawFace(ctx, CONFIG.width/2, CONFIG.height/2, 4, peel);
+
+             if (peel > 0.5) {
+                 drawText(ctx, "ARTIFICIAL MIMICRY", CONFIG.width/2, CONFIG.height-100, 50, 'center', CONFIG.colors.primary);
+             }
+        }
+    },
+    // 5. Suspicious Link (16-20s)
+    {
+        start: 16000, end: 20000,
+        render: (ctx, t, globalT) => {
+             // Chat Bubble
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             const y = 200 + t*100;
+             ctx.fillStyle = '#333';
+             ctx.roundRect(CONFIG.width/2 - 400, y, 800, 150, 20);
+             ctx.fill();
+
+             ctx.fillStyle = CONFIG.colors.primary;
+             ctx.font = '40px "JetBrains Mono"';
+             ctx.textAlign = 'center';
+             ctx.fillText("http://suspicious-webcam.com", CONFIG.width/2, y + 90);
+
+             drawText(ctx, "SCIENTIFIC JOURNAL?", CONFIG.width/2, 100, 40);
+        }
+    },
+    // 6. Infection (20-27s)
+    {
+        start: 20000, end: 27000,
+        render: (ctx, t, globalT) => {
+             // Screen flashing
+             const flash = Math.floor(t * 20); // Int
+             ctx.fillStyle = flash % 2 === 0 ? CONFIG.colors.danger : '#000';
+             ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             drawPhone(ctx, CONFIG.width/2, CONFIG.height/2, 20, flash);
+
+             drawText(ctx, "MALWARE", CONFIG.width/2, 200, 100, 'center', '#fff');
+        }
+    },
+    // 7. Throw Phone (27-31s)
+    {
+        start: 27000, end: 31000,
+        render: (ctx, t, globalT) => {
+             // Phone flying
+             ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0,0,CONFIG.width,CONFIG.height);
+
+             const x = t * CONFIG.width;
+             const y = CONFIG.height/2 - Math.sin(t * Math.PI)*400;
+             const rot = t * 10;
+
+             ctx.save();
+             ctx.translate(x, y);
+             ctx.rotate(rot);
+             drawPhone(ctx, 0, 0, 0, 0);
+             ctx.restore();
+
+             // Speed lines
+             ctx.strokeStyle = '#fff';
+             ctx.lineWidth = 5;
+             ctx.beginPath(); ctx.moveTo(0, CONFIG.height/2); ctx.lineTo(x, y); ctx.stroke();
+        }
+    },
+    // 8. Smallpox (31-36s)
+    {
+        start: 31000, end: 36000,
+        render: (ctx, t, globalT) => {
+             drawText(ctx, "VIRUS CONTRACTED", CONFIG.width/2, CONFIG.height/2, 60, 'center', CONFIG.colors.danger);
+             drawText(ctx, "(DIGITAL SMALLPOX)", CONFIG.width/2, CONFIG.height/2 + 100, 40);
+        }
+    },
+    // 9. Bio Last Time (36-40s)
+    {
+        start: 36000, end: SCENE_DATA.duration,
+        render: (ctx, t, globalT) => {
+             drawText(ctx, "ONE LAST LOOK", CONFIG.width/2, CONFIG.height/2, 60);
+        }
+    }
+];
+
+function drawText(ctx, text, x, y, size, align='center', color=CONFIG.colors.text) {
+    ctx.font = `bold ${size}px "Space Grotesk"`;
+    ctx.textAlign = align;
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+}
+
+let recorder, chunks=[], startTime;
+function startRecording() {
+    recorder = new MediaRecorder(canvas.captureStream(CONFIG.fps), { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = saveVideo;
+    recorder.start();
+}
+function saveVideo() {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+    a.download = 'scene_09.webm';
+    a.click();
+}
+function loop(ts) {
+    if (!startTime) { startTime = ts; startRecording(); }
+    const elapsed = ts - startTime;
+    const shot = SHOTS.find(s => elapsed >= s.start && elapsed < s.end);
+    if (shot) shot.render(ctx, (elapsed - shot.start)/(shot.end - shot.start), elapsed);
+    else if (elapsed > SCENE_DATA.duration) { recorder.stop(); return; }
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
